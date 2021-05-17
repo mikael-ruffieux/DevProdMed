@@ -1,9 +1,5 @@
 # Révisions DevProdMed
 
-## À faire
-
-- Questionnaire 8
-
 # .env
 
 Le fichier `.env`contient toutes les variables d'environnement qui permettent à Laravel d'intéragir avec des éléments externes, comme un serveur mail ou une base de données.
