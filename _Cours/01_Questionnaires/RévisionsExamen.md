@@ -366,3 +366,206 @@ $article->motcles()->attach($mot_ref->id); // Attache à la table pivot un objet
 Lors de la création d'utilisateur, il est important de cacher le mot de passe, et qu'il ne soit pas enregistrer en clair dans la table.
 
 Pour cela, nous utilisons la méthode `Hash::make($password)` dans notre classe-modèle `User`.
+
+# Commandes usuelles
+
+## Utilitaires
+
+- Créer une nouvelle app : `composer create-project laravel/laravel example-app`
+- Lancer le serveur local : `php artisan serve`
+- Lister les routes activées : `php artisan route:list`
+- Création d’un nouvel élément : `php artisan make:typeElement NomElement`
+    - Pour migration :  `php artisan make:migration create_objectsNames_table`
+    - *(Types : controller, request, model, middleware, etc.)*
+- En cas de création de nouvelles classes (notamment des models), rafraîchir Laravel : `composer dumpautoload`
+
+## Bases de données
+
+- Initialiser la table de migration : php artisan migrate:install
+- Migration des tables : php artisan migrate
+- Peuplement d’une table : php artisan db:seed
+
+
+## Authentification
+
+- Téléchargement de l’UI : composer require laravel/ui
+- Définition de l’UI à utiliser : php artisan ui bootstrap --auth
+- Installation de l’UI : npm install && npm run dev (en cas d’erreur, relancer cette commande)
+
+## ACL
+
+- Ajouter nos rôles dans la classe-modèle `App/Models/User` : 
+
+```php
+const ROLE_BASIC = 'ROLE_BASIC';
+const ROLE_EDITEUR = 'ROLE_EDITEUR';
+const ROLE_ADMIN = 'ROLE_ADMIN';
+const ROLES = [User::ROLE_BASIC, User::ROLE_EDITEUR, User::ROLE_ADMIN];
+```
+
+- Attribuer un rôle par défaut à la création d’un nouvel utilisateur dans la table de migration `database/migrations/…` :
+
+```php
+public function up() {
+    Schema::create('users', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('email')->unique();
+        $table->string('password');
+        $table->enum('role', User::ROLES)->default(User::ROLE_BASIC);
+        $table->rememberToken();
+    });
+}
+```
+
+- Créer un modèle de table dédié à l’attribution des rôles : 
+    `php artisan make:model Acl -m`
+    (-m permet de créer directement le fichier de migration)
+
+- Dans la table de migration nouvellement créée :
+
+```php
+public function up()
+{
+    Schema::create('acls', function (Blueprint $table) {
+        $table->id();
+        $table->string('fonctionnalite');
+        $table->string('role');
+    });
+}
+```
+
+- Ajouter le champ dans le modèle ‘Acl’ :
+
+```php
+class Acl extends Model
+{
+    protected $fillable = ['fonctionnalite', 'role'];
+}
+```
+
+- *Facultatif : créer un seeder :*
+
+```php
+class AclTableSeeder extends Seeder {
+
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    public function run() {
+        DB::table('acls')->delete();
+
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_BASIC, 'fonctionnalite' => 'UnControleur@index']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_BASIC, 'fonctionnalite' => 'UnControleur@show']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_EDITEUR, 'fonctionnalite' => 'UnControleur@index']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_EDITEUR, 'fonctionnalite' => 'UnControleur@show']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_EDITEUR, 'fonctionnalite' => 'UnControleur@create']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_EDITEUR, 'fonctionnalite' => 'UnControleur@edit']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_EDITEUR, 'fonctionnalite' => 'UnControleur@store']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_ADMIN, 'fonctionnalite' => 'UnControleur@index']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_ADMIN, 'fonctionnalite' => 'UnControleur@show']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_ADMIN, 'fonctionnalite' => 'UnControleur@create']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_ADMIN, 'fonctionnalite' => 'UnControleur@edit']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_ADMIN, 'fonctionnalite' => 'UnControleur@store']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_ADMIN, 'fonctionnalite' => 'UnControleur@update']);
+        DB::table('acls')->insert(['role' => 
+            User::ROLE_ADMIN, 'fonctionnalite' => 'UnControleur@destroy']);
+    }
+}
+```
+
+- *Facultatif : créer des utilisateurs avec des rôles prédéfinis via un seeder :*
+
+```php
+class UserTableSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        DB::table('users')->delete();
+        
+        DB::table('users')->insert([
+            'name' => 'joe',
+            'email' => 'joe@email.ch',
+            'password' => Hash::make('mdp_joe'),
+        ]); // avec le role par défaut ;-)
+        
+        DB::table('users')->insert([
+            'name' => 'lea',
+            'email' => 'lea@email.ch',
+            'password' => Hash::make('mdp_lea'),
+            'role' => User::ROLE_EDITEUR,
+        ]);
+        
+        DB::table('users')->insert([
+            'name' => 'dom',
+            'email' => 'dom@email.ch',
+            'password' => Hash::make('mdp_dom'),
+            'role' => User::ROLE_ADMIN,
+        ]);
+    }
+}
+```
+
+- *Facultatif : définir l’ordre des seeders, et exécuter : php artisan db:seed (après la migration)*
+
+- Installer l’authentification (comme plus haut)
+
+- Pour gérer les différentes permissions, nous créons un middleware : `php artisan make:middleware AclMiddleware`
+
+```php
+class AclMiddleware {
+
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
+     */
+    public function handle(Request $request, Closure $next) {
+        $role = auth()->user()->getAttributes()['role'];
+
+        $fonctionnalite = substr($request->route()->getActionName(),
+                strrpos($request->route()->getActionName(), '\\') + 1);
+
+        $aAccesA = (Acl::where('role', $role)->where('fonctionnalite', 
+                $fonctionnalite)->count() != 0);
+
+        if (!$aAccesA) {
+            abort(403);
+            //return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        return $next($request);
+    }
+}
+```
+
+- On enregistre le middleware dans le fichier ‘app/Http/Kernel.php’
+
+- On active le middleware dans le constructeur du contrôleur, sous le middleware ‘auth’
+
+
+## Vue.js
+
+npm i -D laravel-mix@next vu e@next @vue/compiler-sfc vue-loader@next
