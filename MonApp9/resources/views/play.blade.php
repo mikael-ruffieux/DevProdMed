@@ -19,11 +19,10 @@
 <div class="row">
     <form method="POST" action="play" accept-charset="UTF-8">
     @csrf
-        @foreach ($questions as $key => $question)
+        @foreach ($questions as $id => $question)
         <div class="col-md-4 col-sm-6 col-12">
-            <label for="{{$key}}">{{$question['question']}}</label>
-            <input type="number" name="answers[{{$key}}][answer]" value="4">
-            <input class="hidden" type="number" name="answers[{{$key}}][correct]" value="{{$question['answer']}}">
+            <label for="{{$id}}">{{$question['val1']." * ".$question['val2']}}</label>
+            <input type="number" name="answers[{{$id}}]" value="4">
         </div>
         @endforeach
         <input type="submit" value="Envoyer">
